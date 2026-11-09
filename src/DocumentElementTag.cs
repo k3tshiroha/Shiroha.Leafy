@@ -9,23 +9,23 @@ public sealed class DocumentElementTag
     public static ByteString DefaultSelfClosingEpilogue { get => field ??= new(" /"u8); }
 
     public bool IsClosingTag { get; }
-    public ByteString NodeType { get; }
+    public ByteString ElementType { get; }
     public ImmutableArray<DocumentElementAttribute> Attributes { get; }
     public ByteString Epilogue { get; }
     public bool IsSelfClosing { get; }
 
-    public DocumentElementTag(bool isClosing, ByteString nodeType, ImmutableArray<DocumentElementAttribute> attributes, ByteString epilogue)
+    public DocumentElementTag(bool isClosing, ByteString elementType, ImmutableArray<DocumentElementAttribute> attributes, ByteString epilogue)
     {
         if (
-            nodeType.IsEmpty ||
-            "+-.:"u8.Contains(nodeType[0]) ||
-            nodeType.AsSpan().ContainsAnyInRange((byte)0, (byte)'*') ||
-            nodeType.AsSpan().ContainsAnyInRange((byte)';', (byte)'@') ||
-            nodeType.AsSpan().ContainsAnyInRange((byte)'[', (byte)'^') ||
-            nodeType.AsSpan().ContainsAnyInRange((byte)'{', (byte)127) ||
-            nodeType.AsSpan().ContainsAny(",/<`"u8)
+            elementType.IsEmpty ||
+            "+-.:"u8.Contains(elementType[0]) ||
+            elementType.AsSpan().ContainsAnyInRange((byte)0, (byte)'*') ||
+            elementType.AsSpan().ContainsAnyInRange((byte)';', (byte)'@') ||
+            elementType.AsSpan().ContainsAnyInRange((byte)'[', (byte)'^') ||
+            elementType.AsSpan().ContainsAnyInRange((byte)'{', (byte)127) ||
+            elementType.AsSpan().ContainsAny(",/<`"u8)
             )
-            throw new ArgumentException(null, nameof(nodeType));
+            throw new ArgumentException(null, nameof(elementType));
         if (
             !epilogue.IsEmpty &&
             (epilogue[^1] == (byte)'/' ? epilogue.AsSpan()[..^1] : epilogue.AsSpan())
@@ -34,7 +34,7 @@ public sealed class DocumentElementTag
             throw new ArgumentException(null, nameof(epilogue));
 
         this.IsClosingTag = isClosing;
-        this.NodeType = nodeType;
+        this.ElementType = elementType;
         this.Attributes = attributes;
         this.Epilogue = epilogue;
         this.IsSelfClosing = !epilogue.IsEmpty && epilogue[^1] == (byte)'/';
@@ -45,7 +45,7 @@ public sealed class DocumentElementTag
     {
 
         dest.Write(!this.IsClosingTag ? "<"u8 : "</"u8);
-        dest.Write(this.NodeType);
+        dest.Write(this.ElementType);
         foreach (var a in this.Attributes)
         {
             a.Serialize(dest);

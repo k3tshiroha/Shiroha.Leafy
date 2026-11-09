@@ -9,11 +9,11 @@ public sealed class DocumentElement : DocumentNode
     public DocumentElementTag ClosingTag { get; }
     public ImmutableArray<DocumentNode> SubNodes { get; }
 
-    public ByteString NodeType => this.OpeningTag.NodeType;
+    public ByteString ElementType => this.OpeningTag.ElementType;
 
     public DocumentElement(DocumentElementTag openingTag, DocumentElementTag closingTag, ImmutableArray<DocumentNode> subNodes)
     {
-        if (openingTag.NodeType != closingTag.NodeType) throw new ArgumentException(null, nameof(closingTag));
+        if (openingTag.ElementType != closingTag.ElementType) throw new ArgumentException(null, nameof(closingTag));
 
         this.OpeningTag = openingTag;
         this.ClosingTag = closingTag;
