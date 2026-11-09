@@ -14,7 +14,7 @@ public sealed class ByteString : IEquatable<ByteString>
 
     public ByteString(ReadOnlySpan<byte> bytes)
     {
-        this._bytes = bytes.ToArray();
+        this._bytes = bytes.ToArray(); // returns Array.Empty<byte>() for an empty span.
     }
 
     public ReadOnlySpan<byte> AsSpan()
