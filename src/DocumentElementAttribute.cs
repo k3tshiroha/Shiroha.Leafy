@@ -31,8 +31,8 @@ public sealed class DocumentElementAttribute
             throw new ArgumentException(null, nameof(separator));
         if (
             key.IsEmpty ||
-            key.AsSpan().ContainsAnyInRange((byte)0, (byte)32) ||
-            key.AsSpan().ContainsAnyInRange((byte)'<', (byte)'>') || // "<=>"u8
+            key.AsSpan().ContainsAnyInRange((byte)0, (byte)32) || // deny control chars and white space
+            key.AsSpan().ContainsAnyInRange((byte)'<', (byte)'>') || // deny '<', '=', '>'
             key.AsSpan().ContainsAny((byte)'"', (byte)'\'')
             )
             throw new ArgumentException(null, nameof(key));
@@ -43,8 +43,8 @@ public sealed class DocumentElementAttribute
                 case (byte)'"':
                 case (byte)'\'':
                     if (
-                        value.AsSpan().ContainsAnyInRange((byte)0, (byte)8) ||
-                        value.AsSpan().ContainsAnyInRange((byte)14, (byte)31) ||
+                        value.AsSpan().ContainsAnyInRange((byte)0, (byte)8) || // allow '\t', '\n', '\v', '\f', '\r'
+                        value.AsSpan().ContainsAnyInRange((byte)14, (byte)31) || // allow white space, alphabets, and symbols
                         value.AsSpan().ContainsAny((byte)127, quotationChar)
                         )
                         throw new ArgumentException(null, nameof(value));
@@ -52,8 +52,8 @@ public sealed class DocumentElementAttribute
                 case 0:
                     if (
                         !value.IsEmpty && (
-                            value.AsSpan().ContainsAnyInRange((byte)0, (byte)32) ||
-                            value.AsSpan().ContainsAny((byte)127, (byte)'<', (byte)'>') ||
+                            value.AsSpan().ContainsAnyInRange((byte)0, (byte)32) || // deny control chars and white space
+                            value.AsSpan().ContainsAny((byte)127, (byte)'<', (byte)'>') || // deny '<', '>'
                             value[0] is (byte)'"' or (byte)'\''
                             )
                         )
