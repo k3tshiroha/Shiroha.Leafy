@@ -5,15 +5,16 @@ namespace Shiroha.Leafy;
 
 public sealed class DocumentElement : DocumentNode
 {
-    public DocumentElementTag OpeningTag { get; }
-    public DocumentElementTag ClosingTag { get; }
+    public DocumentElementTag OpeningTag { get; } // Note: `OpeningTag` can be a closing tag. This occurs when an orphan closing tag is found in the document.
+    public DocumentElementTag? ClosingTag { get; }
     public ImmutableArray<DocumentNode> SubNodes { get; }
 
     public ByteString ElementType => this.OpeningTag.ElementType;
 
-    public DocumentElement(DocumentElementTag openingTag, DocumentElementTag closingTag, ImmutableArray<DocumentNode> subNodes)
+    public DocumentElement(DocumentElementTag openingTag, DocumentElementTag? closingTag, ImmutableArray<DocumentNode> subNodes)
     {
-        if (openingTag.ElementType != closingTag.ElementType) throw new ArgumentException(null, nameof(closingTag));
+        if (closingTag != null && openingTag.ElementType != closingTag.ElementType) throw new ArgumentException(null, nameof(closingTag));
+        if (closingTag != null && !closingTag.IsClosingTag) throw new ArgumentException(null, nameof(closingTag));
 
         this.OpeningTag = openingTag;
         this.ClosingTag = closingTag;
@@ -27,6 +28,6 @@ public sealed class DocumentElement : DocumentNode
         {
             c.Serialize(dest);
         }
-        this.ClosingTag.Serialize(dest);
+        this.ClosingTag?.Serialize(dest);
     }
 }
