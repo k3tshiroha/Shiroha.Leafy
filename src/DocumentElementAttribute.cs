@@ -31,8 +31,8 @@ public sealed class DocumentElementAttribute
             throw new ArgumentException(null, nameof(separator));
         if (
             key.IsEmpty ||
-            key.AsSpan().ContainsAnyInRange((byte)0, (byte)32) || // deny control chars and white space
-            key.AsSpan().ContainsAnyInRange((byte)'<', (byte)'>') || // deny '<', '=', '>'
+            key.AsSpan().ContainsAnyInRange((byte)0, (byte)32) || // disallow control chars and white space
+            key.AsSpan().ContainsAnyInRange((byte)'<', (byte)'>') || // disallow '<', '=', '>'
             key.AsSpan().ContainsAny((byte)'"', (byte)'\'')
             )
             throw new ArgumentException(null, nameof(key));
@@ -52,8 +52,8 @@ public sealed class DocumentElementAttribute
                 case 0:
                     if (
                         !value.IsEmpty && (
-                            value.AsSpan().ContainsAnyInRange((byte)0, (byte)32) || // deny control chars and white space
-                            value.AsSpan().ContainsAny((byte)127, (byte)'<', (byte)'>') || // deny '<', '>'
+                            value.AsSpan().ContainsAnyInRange((byte)0, (byte)32) || // disallow control chars and white space
+                            value.AsSpan().ContainsAny((byte)127, (byte)'<', (byte)'>') || // disallow '<', '>'
                             value[0] is (byte)'"' or (byte)'\''
                             )
                         )
