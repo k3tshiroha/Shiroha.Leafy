@@ -27,33 +27,26 @@ public sealed class DocumentElementAttribute
 
     public DocumentElementAttribute(ByteString separator, ByteString key, ByteString value, byte quotationChar)
     {
-        if (separator.IsEmpty || separator.AsSpan().ContainsAnyExcept([(byte)' ', new ByteRange((byte)'\t', (byte)'\r')]))
+        if (separator.IsEmpty || separator.AsSpan().ContainsAnyExcept(DocumentSearchValues.WhiteSpaces))
             throw new ArgumentException(null, nameof(separator));
-        if (
-            key.IsEmpty ||
-            key.AsSpan().ContainsAnyInRange((byte)0, (byte)32) || // disallow control chars and white space
-            key.AsSpan().ContainsAnyInRange((byte)'<', (byte)'>') || // disallow '<', '=', '>'
-            key.AsSpan().ContainsAny((byte)'"', (byte)'\'')
-            )
+        if (key.IsEmpty || key.AsSpan().ContainsAny(DocumentSearchValues.DisallowedInAttributeName))
             throw new ArgumentException(null, nameof(key));
         if (value != null)
         {
             switch (quotationChar)
             {
-                case (byte)'"':
                 case (byte)'\'':
-                    if (
-                        value.AsSpan().ContainsAnyInRange((byte)0, (byte)8) || // allow '\t', '\n', '\v', '\f', '\r'
-                        value.AsSpan().ContainsAnyInRange((byte)14, (byte)31) || // allow white space, alphabets, and symbols
-                        value.AsSpan().ContainsAny((byte)127, quotationChar)
-                        )
+                    if (value.AsSpan().ContainsAny(DocumentSearchValues.DisallowedInAttributeValueSinglequoted))
+                        throw new ArgumentException(null, nameof(value));
+                    break;
+                case (byte)'"':
+                    if (value.AsSpan().ContainsAny(DocumentSearchValues.DisallowedInAttributeValueDoublequoted))
                         throw new ArgumentException(null, nameof(value));
                     break;
                 case 0:
                     if (
                         !value.IsEmpty && (
-                            value.AsSpan().ContainsAnyInRange((byte)0, (byte)32) || // disallow control chars and white space
-                            value.AsSpan().ContainsAny((byte)127, (byte)'<', (byte)'>') || // disallow '<', '>'
+                            value.AsSpan().ContainsAny(DocumentSearchValues.DisallowedInAttributeValueUnquoted) ||
                             value[0] is (byte)'"' or (byte)'\''
                             )
                         )

@@ -18,20 +18,14 @@ public sealed class DocumentElementTag
     {
         if (
             elementType.IsEmpty ||
-            "+-.:"u8.Contains(elementType[0]) ||
-            elementType.AsSpan().ContainsAnyInRange((byte)0, (byte)' ') || // allow '!' at the head
-            elementType.AsSpan().ContainsAnyInRange((byte)'"', (byte)'*') || // allow '+', '-', '.'
-            elementType.AsSpan().ContainsAnyInRange((byte)';', (byte)'@') || // allow ':'
-            elementType.AsSpan().ContainsAnyInRange((byte)'[', (byte)'^') || // allow '_'
-            elementType.AsSpan().ContainsAnyInRange((byte)'{', (byte)127) ||
-            elementType.AsSpan().ContainsAny(",/<`"u8) ||
-            elementType.AsSpan()[1..].Contains((byte)'!')
+            !DocumentSearchValues.AllowedInHeadOfElementType.Contains(elementType[0]) ||
+            elementType.AsSpan()[1..].ContainsAnyExcept(DocumentSearchValues.AllowedInElementType)
             )
             throw new ArgumentException(null, nameof(elementType));
         if (
             !epilogue.IsEmpty &&
             (epilogue[^1] == (byte)'/' ? epilogue.AsSpan()[..^1] : epilogue.AsSpan())
-            .ContainsAnyExcept([(byte)' ', new ByteRange((byte)'\t', (byte)'\r')]) // ' ', '\t', '\n', '\v', '\f', '\r'
+            .ContainsAnyExcept(DocumentSearchValues.WhiteSpaces)
             )
             throw new ArgumentException(null, nameof(epilogue));
 
