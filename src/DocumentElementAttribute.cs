@@ -14,18 +14,18 @@ public sealed class DocumentElementAttribute
     public byte QuotationChar { get; }
 
     public DocumentElementAttribute(ByteString key)
-     : this(_WhiteSpace, key, null!, (byte)'@') // 「@」is meaningless, set to this's property but never appears on output.
+     : this(_WhiteSpace, key, null, (byte)'@') // 「@」is meaningless, set to this's property but never appears on output.
     { }
 
-    public DocumentElementAttribute(ByteString key, ByteString value)
-     : this(_WhiteSpace, key, value, value.AsSpan().Contains((byte)'"') ? (byte)'\'' : (byte)'"')
+    public DocumentElementAttribute(ByteString key, ByteString? value)
+     : this(_WhiteSpace, key, value, value == null ? (byte)'@' : value.AsSpan().Contains((byte)'"') ? (byte)'\'' : (byte)'"')
     { }
 
-    public DocumentElementAttribute(ByteString key, ByteString value, byte quotationChar)
+    public DocumentElementAttribute(ByteString key, ByteString? value, byte quotationChar)
      : this(_WhiteSpace, key, value, quotationChar)
     { }
 
-    public DocumentElementAttribute(ByteString separator, ByteString key, ByteString value, byte quotationChar)
+    public DocumentElementAttribute(ByteString separator, ByteString key, ByteString? value, byte quotationChar)
     {
         if (separator.IsEmpty || separator.AsSpan().ContainsAnyExcept(DocumentSearchValues.WhiteSpaces))
             throw new ArgumentException(null, nameof(separator));
