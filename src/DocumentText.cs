@@ -4,11 +4,11 @@ using System.Diagnostics;
 
 namespace Shiroha.Leafy;
 
-public sealed class DocumentTextNode : DocumentNode
+public sealed class DocumentText : DocumentNode
 {
     public ByteString Text { get; }
 
-    public DocumentTextNode(ReadOnlySpan<byte> bytes, bool doEscape)
+    public DocumentText(ReadOnlySpan<byte> bytes, bool doEscape)
     {
         if (bytes.Length > 1 << 20) throw new ArgumentException("The input was too long.", nameof(bytes));
 
