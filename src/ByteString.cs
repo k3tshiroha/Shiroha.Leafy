@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace Shiroha.Leafy;
 
@@ -27,13 +28,6 @@ public sealed class ByteString : IEquatable<ByteString>
         return str.AsSpan();
     }
 
-    public override int GetHashCode()
-    {
-        var h = new HashCode();
-        h.AddBytes(this.AsSpan());
-        return h.ToHashCode();
-    }
-
     public static bool operator ==(ByteString? a, ByteString? b)
     {
         if (object.ReferenceEquals(a, b)) return true;
@@ -45,4 +39,16 @@ public sealed class ByteString : IEquatable<ByteString>
 
     public override bool Equals(object? obj) => obj is ByteString str && this == str;
     public bool Equals(ByteString? other) => this == other;
+
+    public override int GetHashCode()
+    {
+        var h = new HashCode();
+        h.AddBytes(this.AsSpan());
+        return h.ToHashCode();
+    }
+
+    public override string ToString()
+    {
+        return Encoding.UTF8.GetString(this.AsSpan());
+    }
 }
