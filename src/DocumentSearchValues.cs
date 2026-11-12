@@ -54,7 +54,7 @@ internal static class DocumentSearchValues
         headOfElementType.AppendAll(outOfASCII);
         elementType.AppendAll(alphabetsAndNumbers);
         elementType.AppendAll(outOfASCII);
-        headOfElementType.AppendAll("!_"u8);
+        headOfElementType.AppendAll("_"u8);
         elementType.AppendAll("+-.:_"u8);
         AllowedInHeadOfElementType = SearchValues.Create(headOfElementType.Span);
         AllowedInElementType = SearchValues.Create(elementType.Span);
