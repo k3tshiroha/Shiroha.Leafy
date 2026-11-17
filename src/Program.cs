@@ -85,11 +85,11 @@ using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileSha
                 return 1;
             case DocumentParserStatus.Unterminated:
                 Console.Error.WriteLine($"Error: unterminated\n    at {path}:({lineCounter.Line}, {lineCounter.Column})");
-                break;
+                return 1;
             default:
                 throw new UnreachableException();
         }
-        if (isFinal) break;
+        if (isFinal && cnt == 0) break;
     }
 }
 

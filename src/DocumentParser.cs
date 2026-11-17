@@ -62,6 +62,7 @@ where TSettings : IDocumentParserSettings
         ReadAttributeValue,
         ReadTagEpilogue,
         ReadRawTextElement,
+        ReadRawTextElementClosingTag,
         ReadDeclaration,
         ReadDoctype,
         ReadComment,
@@ -160,9 +161,19 @@ where TSettings : IDocumentParserSettings
                             this._state = State.ReadElementType;
                             continue;
                         case (byte)'!':
+                            if (pushTextNode())
+                            {
+                                bytesConsumed = input.BytesConsumed;
+                                return DocumentParserStatus.FinishedSuccessfully;
+                            }
                             this._state = State.ReadDeclaration;
                             continue;
                         case (byte)'?':
+                            if (pushTextNode())
+                            {
+                                bytesConsumed = input.BytesConsumed;
+                                return DocumentParserStatus.FinishedSuccessfully;
+                            }
                             this._state = State.ReadInstruction;
                             continue;
                         default:
@@ -213,6 +224,11 @@ where TSettings : IDocumentParserSettings
                     {
                         this._state = State.ReadTagEpilogue;
                         continue;
+                    }
+                    if (this._text.WrittenCount == 0)
+                    {
+                        bytesConsumed = input.BytesConsumed;
+                        return DocumentParserStatus.UnexpectedChar;
                     }
                     this._attSeparator = takeText();
                     this._state = State.ReadAttributeName;
@@ -382,12 +398,19 @@ where TSettings : IDocumentParserSettings
                 case State.ReadRawTextElement:
                     if (this._endOfRawTextSection == null) throw new UnreachableException();
                     collectTextUntil(ref input, this._endOfRawTextSection);
-                    if (!input.Span.StartsWith(this._endOfRawTextSection))
+                    if (input.Span.Length <= this._endOfRawTextSection.Length)
                     {
                         if (isFinal)
                         {
+                            // this is part of the raw text
                             this._text.Write(input.Span);
                             input.ConsumeAll();
+                            if (pushTextNode()) throw new UnreachableException();
+                            if (!rollup()) throw new UnreachableException();
+                            this._endOfRawTextSection = null;
+                            this._state = State.ReadNode;
+                            bytesConsumed = input.BytesConsumed;
+                            return DocumentParserStatus.FinishedSuccessfully;
                         }
                         else
                         {
@@ -395,14 +418,76 @@ where TSettings : IDocumentParserSettings
                             return DocumentParserStatus.Continue;
                         }
                     }
-                    this._endOfRawTextSection = null;
-                    this._state = State.ReadNode;
-                    continue;
+                    if (
+                        input.Span[this._endOfRawTextSection.Length] is (byte)'>' or (byte)'/' ||
+                        DocumentSearchValues.WhiteSpaces.Contains(input.Span[this._endOfRawTextSection.Length])
+                        )
+                    {
+                        if (pushTextNode()) throw new UnreachableException();
+                        input.Consume(this._endOfRawTextSection.Length);
+                        this._state = State.ReadRawTextElementClosingTag;
+                        continue;
+                    }
+                    else
+                    {
+                        this._text.Write(this._endOfRawTextSection);
+                        input.Consume(this._endOfRawTextSection.Length);
+                        continue;
+                    }
+                case State.ReadRawTextElementClosingTag:
+                    if (this._endOfRawTextSection == null) throw new UnreachableException();
+                    collectText(ref input, DocumentSearchValues.WhiteSpaces);
+                    if (input.Span.IsEmpty)
+                    {
+                        bytesConsumed = input.BytesConsumed;
+                        return !isFinal ? DocumentParserStatus.Continue : DocumentParserStatus.Unterminated;
+                    }
+                    if (input.Span[0] == '/')
+                    {
+                        if (input.Span.Length == 1)
+                        {
+                            bytesConsumed = input.BytesConsumed;
+                            if (isFinal)
+                            {
+                                input.Consume(1);
+                                this._state = State.Error;
+                                return DocumentParserStatus.Unterminated;
+                            }
+                            else
+                            {
+                                return DocumentParserStatus.Continue;
+                            }
+                        }
+                        this._text.Write("/"u8);
+                        input.Consume(1);
+                    }
+                    if (input.Span[0] == '>')
+                    {
+                        input.Consume(1);
+                        ByteString elementType = new(this._endOfRawTextSection.AsSpan()[2..]);
+                        ByteString epilogue = takeText();
+                        DocumentElementTag closingTag = new(true, elementType, [], epilogue);
+                        bool hasResult = endElement(closingTag);
+                        this._endOfRawTextSection = null;
+                        this._state = State.ReadNode;
+                        if (hasResult)
+                        {
+                            bytesConsumed = input.BytesConsumed;
+                            return DocumentParserStatus.FinishedSuccessfully;
+                        }
+                        continue;
+                    }
+                    else
+                    {
+                        bytesConsumed = input.BytesConsumed;
+                        this._state = State.Error;
+                        return DocumentParserStatus.UnexpectedChar;
+                    }
                 case State.ReadDeclaration:
                     if (input.Span.Length < 3)
                     {
                         bytesConsumed = input.BytesConsumed;
-                        return isFinal ? DocumentParserStatus.Continue : DocumentParserStatus.Unterminated;
+                        return !isFinal ? DocumentParserStatus.Continue : DocumentParserStatus.Unterminated;
                     }
                     if (input.Span[0] != '<' || input.Span[1] != '!') throw new UnreachableException();
                     if (input.Span[2] is (byte)'-')
@@ -444,7 +529,7 @@ where TSettings : IDocumentParserSettings
                             case -1:
                                 bytesConsumed = input.BytesConsumed;
                                 this._state = State.Error;
-                                return DocumentParserStatus.UnexpectedChar;
+                                return input.Span.IsEmpty ? DocumentParserStatus.Unterminated : DocumentParserStatus.UnexpectedChar;
                             case 0:
                                 bytesConsumed = input.BytesConsumed;
                                 return DocumentParserStatus.Continue;
@@ -467,7 +552,7 @@ where TSettings : IDocumentParserSettings
                         case -1:
                             bytesConsumed = input.BytesConsumed;
                             this._state = State.Error;
-                            return DocumentParserStatus.UnexpectedChar;
+                            return input.Span.IsEmpty ? DocumentParserStatus.Unterminated : DocumentParserStatus.UnexpectedChar;
                         case 0:
                             bytesConsumed = input.BytesConsumed;
                             return DocumentParserStatus.Continue;
@@ -491,7 +576,7 @@ where TSettings : IDocumentParserSettings
                         case -1:
                             bytesConsumed = input.BytesConsumed;
                             this._state = State.Error;
-                            return DocumentParserStatus.UnexpectedChar;
+                            return input.Span.IsEmpty ? DocumentParserStatus.Unterminated : DocumentParserStatus.UnexpectedChar;
                         case 0:
                             bytesConsumed = input.BytesConsumed;
                             return DocumentParserStatus.Continue;
@@ -515,7 +600,7 @@ where TSettings : IDocumentParserSettings
                         case -1:
                             bytesConsumed = input.BytesConsumed;
                             this._state = State.Error;
-                            return DocumentParserStatus.UnexpectedChar;
+                            return input.Span.IsEmpty ? DocumentParserStatus.Unterminated : DocumentParserStatus.UnexpectedChar;
                         case 0:
                             bytesConsumed = input.BytesConsumed;
                             return DocumentParserStatus.Continue;
@@ -664,7 +749,18 @@ where TSettings : IDocumentParserSettings
             if (!collectKeyword(ref input, isFinal, beginning, out status)) return status;
         }
         collectTextUntil(ref input, end);
-        if (input.Span.Length < end.Length) return 0;
+        if (input.Span.Length < end.Length)
+        {
+            if (isFinal)
+            {
+                input.ConsumeAll();
+                return -1; // unterminated
+            }
+            else
+            {
+                return 0; // continue
+            }
+        }
         collectKeyword(ref input, isFinal, end, out status);
         return status;
     }
@@ -713,7 +809,6 @@ where TSettings : IDocumentParserSettings
 
     bool endElement(DocumentElementTag? closingTag)
     {
-        if (this._stack.Count == 0) throw new UnreachableException();
         DocumentElement node;
         if (this._stack.TryPeek(out var frame))
         {

@@ -66,7 +66,7 @@ public sealed class DocumentText : DocumentNode
                 // write escaped char
                 escapedChar.CopyTo(ar.AsSpan(cnt));
                 span = span[1..];
-                ++cnt;
+                cnt += escapedChar.Length;
             }
         }
 

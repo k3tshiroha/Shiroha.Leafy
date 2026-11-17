@@ -16,6 +16,14 @@ public sealed class DocumentElement : DocumentNode
         if (closingTag != null && openingTag.ElementType != closingTag.ElementType) throw new ArgumentException(null, nameof(closingTag));
         if (closingTag != null && !closingTag.IsClosingTag) throw new ArgumentException(null, nameof(closingTag));
 
+        // Note:
+        //   `default(ImmutableArray<T>).GetEnumerator()` throws `NullReferenceException`
+        //   so we need to explicitly replace it with an empty array.
+        if (subNodes.IsDefault)
+        {
+            subNodes = ImmutableArray<DocumentNode>.Empty;
+        }
+
         this.OpeningTag = openingTag;
         this.ClosingTag = closingTag;
         this.SubNodes = subNodes;
